@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Categoria;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.Models;
 
 namespace SistemaInventario.API.Controllers
@@ -22,9 +23,38 @@ namespace SistemaInventario.API.Controllers
         // GET: api/categorias
         // Usuario y Administrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CategoriaDto>>> GetCategorias()
+        public async Task<ActionResult<RespuestaPaginadaDto<CategoriaDto>>> GetCategorias(
+            int page = 1,
+            int pageSize = 10)
         {
-            var categorias = await _context.Categorias
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Categorias.AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var categorias = await query
+                .OrderBy(c => c.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(c => new CategoriaDto
                 {
                     Id = c.Id,
@@ -33,7 +63,16 @@ namespace SistemaInventario.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(categorias);
+            var respuesta = new RespuestaPaginadaDto<CategoriaDto>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = categorias
+            };
+
+            return Ok(respuesta);
         }
 
         // GET: api/categorias/5

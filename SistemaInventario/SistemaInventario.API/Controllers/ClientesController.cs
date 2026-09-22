@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.Models;
 using Microsoft.AspNetCore.Authorization;
 
@@ -18,12 +19,57 @@ namespace SistemaInventario.API.Controllers
             _context = context;
         }
 
+        // GET: api/clientes
+        // Usuario y Administrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
+        public async Task<ActionResult<RespuestaPaginadaDto<Cliente>>> GetClientes(
+            int page = 1,
+            int pageSize = 10)
         {
-            return await _context.Clientes.ToListAsync();
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Clientes.AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var clientes = await query
+                .OrderBy(c => c.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var respuesta = new RespuestaPaginadaDto<Cliente>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = clientes
+            };
+
+            return Ok(respuesta);
         }
 
+        // GET: api/clientes/5
+        // Usuario y Administrador
         [HttpGet("{id}")]
         public async Task<ActionResult<Cliente>> GetCliente(int id)
         {
@@ -31,12 +77,17 @@ namespace SistemaInventario.API.Controllers
 
             if (cliente == null)
             {
-                return NotFound(new { mensaje = "El cliente no existe." });
+                return NotFound(new
+                {
+                    mensaje = "El cliente no existe."
+                });
             }
 
             return Ok(cliente);
         }
 
+        // POST: api/clientes
+        // Solo Administrador
         [HttpPost]
         [Authorize(Roles = "Administrador")]
         public async Task<ActionResult<Cliente>> CrearCliente(Cliente cliente)
@@ -51,6 +102,8 @@ namespace SistemaInventario.API.Controllers
             );
         }
 
+        // PUT: api/clientes/5
+        // Solo Administrador
         [HttpPut("{id}")]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> ActualizarCliente(
@@ -70,7 +123,10 @@ namespace SistemaInventario.API.Controllers
 
             if (!clienteExiste)
             {
-                return NotFound(new { mensaje = "El cliente no existe." });
+                return NotFound(new
+                {
+                    mensaje = "El cliente no existe."
+                });
             }
 
             _context.Entry(cliente).State = EntityState.Modified;
@@ -80,6 +136,8 @@ namespace SistemaInventario.API.Controllers
             return NoContent();
         }
 
+        // DELETE: api/clientes/5
+        // Solo Administrador
         [HttpDelete("{id}")]
         [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> EliminarCliente(int id)
@@ -90,7 +148,10 @@ namespace SistemaInventario.API.Controllers
 
             if (cliente == null)
             {
-                return NotFound(new { mensaje = "El cliente no existe." });
+                return NotFound(new
+                {
+                    mensaje = "El cliente no existe."
+                });
             }
 
             if (cliente.Ventas.Any())

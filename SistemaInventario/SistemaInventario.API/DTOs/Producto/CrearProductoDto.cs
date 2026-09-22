@@ -18,5 +18,7 @@ namespace SistemaInventario.API.DTOs.Producto
         [Required]
         [Range(1, int.MaxValue)]
         public int CategoriaId { get; set; }
+
+        public IFormFile? Imagen { get; set; }
     }
 }

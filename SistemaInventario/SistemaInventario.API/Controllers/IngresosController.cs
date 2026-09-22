@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Ingreso;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -22,12 +23,42 @@ namespace SistemaInventario.API.Controllers
 
         // GET: api/ingresos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<IngresoDto>>> GetIngresos()
+        public async Task<ActionResult<RespuestaPaginadaDto<IngresoDto>>> GetIngresos(
+            int page = 1,
+            int pageSize = 10)
         {
-            var ingresos = await _context.Ingresos
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Ingresos
                 .Include(i => i.Proveedor)
                 .Include(i => i.Detalles)
                     .ThenInclude(d => d.Producto)
+                .AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var ingresos = await query
+                .OrderBy(i => i.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(i => new IngresoDto
                 {
                     Id = i.Id,
@@ -50,7 +81,16 @@ namespace SistemaInventario.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(ingresos);
+            var respuesta = new RespuestaPaginadaDto<IngresoDto>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = ingresos
+            };
+
+            return Ok(respuesta);
         }
 
         // GET: api/ingresos/5
