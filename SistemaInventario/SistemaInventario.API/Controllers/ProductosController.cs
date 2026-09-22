@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.DTOs.Producto;
 using SistemaInventario.API.Models;
 
@@ -22,10 +23,40 @@ namespace SistemaInventario.API.Controllers
         // GET: api/productos
         // Usuario y Administrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProductoDto>>> GetProductos()
+        public async Task<ActionResult<RespuestaPaginadaDto<ProductoDto>>> GetProductos(
+            int page = 1,
+            int pageSize = 10)
         {
-            var productos = await _context.Productos
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Productos
                 .Include(p => p.Categoria)
+                .AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var productos = await query
+                .OrderBy(p => p.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(p => new ProductoDto
                 {
                     Id = p.Id,
@@ -41,7 +72,16 @@ namespace SistemaInventario.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(productos);
+            var respuesta = new RespuestaPaginadaDto<ProductoDto>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = productos
+            };
+
+            return Ok(respuesta);
         }
 
         // GET: api/productos/5

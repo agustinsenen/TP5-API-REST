@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Venta;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
@@ -20,13 +21,44 @@ namespace SistemaInventario.API.Controllers
             _context = context;
         }
 
+        // GET: api/ventas
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<VentaDto>>> GetVentas()
+        public async Task<ActionResult<RespuestaPaginadaDto<VentaDto>>> GetVentas(
+            int page = 1,
+            int pageSize = 10)
         {
-            var ventas = await _context.Ventas
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Ventas
                 .Include(v => v.Cliente)
                 .Include(v => v.Detalles)
                     .ThenInclude(d => d.Producto)
+                .AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var ventas = await query
+                .OrderBy(v => v.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(v => new VentaDto
                 {
                     Id = v.Id,
@@ -49,9 +81,19 @@ namespace SistemaInventario.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(ventas);
+            var respuesta = new RespuestaPaginadaDto<VentaDto>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = ventas
+            };
+
+            return Ok(respuesta);
         }
 
+        // GET: api/ventas/5
         [HttpGet("{id}")]
         public async Task<ActionResult<VentaDto>> GetVenta(int id)
         {
@@ -93,6 +135,7 @@ namespace SistemaInventario.API.Controllers
             return Ok(venta);
         }
 
+        // POST: api/ventas
         [HttpPost]
         public async Task<ActionResult<VentaDto>> CrearVenta(
             CrearVentaDto dto)
@@ -125,7 +168,6 @@ namespace SistemaInventario.API.Controllers
             var venta = new Venta
             {
                 ClienteId = dto.ClienteId,
-
                 UsuarioId = usuarioId,
                 Fecha = DateTime.Now
             };

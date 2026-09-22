@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
+using SistemaInventario.API.DTOs.Paginacion;
 using SistemaInventario.API.DTOs.Proveedor;
 using SistemaInventario.API.Models;
 
@@ -22,9 +23,38 @@ namespace SistemaInventario.API.Controllers
         // GET: api/proveedores
         // Usuario y Administrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ProveedorDto>>> GetProveedores()
+        public async Task<ActionResult<RespuestaPaginadaDto<ProveedorDto>>> GetProveedores(
+            int page = 1,
+            int pageSize = 10)
         {
-            var proveedores = await _context.Proveedores
+            if (page < 1)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El número de página debe ser mayor o igual a 1."
+                });
+            }
+
+            if (pageSize < 1 || pageSize > 50)
+            {
+                return BadRequest(new
+                {
+                    mensaje = "El tamaño de página debe estar entre 1 y 50."
+                });
+            }
+
+            var query = _context.Proveedores.AsQueryable();
+
+            var totalRegistros = await query.CountAsync();
+
+            var totalPaginas = (int)Math.Ceiling(
+                totalRegistros / (double)pageSize
+            );
+
+            var proveedores = await query
+                .OrderBy(p => p.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(p => new ProveedorDto
                 {
                     Id = p.Id,
@@ -35,7 +65,16 @@ namespace SistemaInventario.API.Controllers
                 })
                 .ToListAsync();
 
-            return Ok(proveedores);
+            var respuesta = new RespuestaPaginadaDto<ProveedorDto>
+            {
+                Pagina = page,
+                TamanoPagina = pageSize,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = totalPaginas,
+                Datos = proveedores
+            };
+
+            return Ok(respuesta);
         }
 
         // GET: api/proveedores/5
