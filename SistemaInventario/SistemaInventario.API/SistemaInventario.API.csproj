@@ -24,6 +24,7 @@
   <ItemGroup>
     <Folder Include="Helpers\" />
     <Folder Include="Services\" />
+    <Folder Include="wwwroot\uploads\productos\" />
   </ItemGroup>
 
 </Project>
