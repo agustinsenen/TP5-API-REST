@@ -3,11 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Ingreso;
 using SistemaInventario.API.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SistemaInventario.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class IngresosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -109,11 +112,23 @@ namespace SistemaInventario.API.Controllers
                 });
             }
 
+            var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (usuarioIdClaim == null)
+            {
+                return Unauthorized(new
+                {
+                    mensaje = "No se pudo identificar al usuario autenticado."
+                });
+            }
+
+            var usuarioId = int.Parse(usuarioIdClaim.Value);
+
             // 2. Crear el ingreso
             var ingreso = new Ingreso
             {
                 ProveedorId = dto.ProveedorId,
-                UsuarioId = 1,
+                UsuarioId = usuarioId,
                 Fecha = DateTime.Now
             };
 

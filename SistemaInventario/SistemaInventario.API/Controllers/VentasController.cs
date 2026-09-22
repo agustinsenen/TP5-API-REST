@@ -3,11 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Venta;
 using SistemaInventario.API.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SistemaInventario.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class VentasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -106,14 +109,24 @@ namespace SistemaInventario.API.Controllers
                 });
             }
 
+            var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (usuarioIdClaim == null)
+            {
+                return Unauthorized(new
+                {
+                    mensaje = "No se pudo identificar al usuario autenticado."
+                });
+            }
+
+            var usuarioId = int.Parse(usuarioIdClaim.Value);
+
             // Crear la venta
             var venta = new Venta
             {
                 ClienteId = dto.ClienteId,
 
-                // Temporal hasta implementar JWT
-                UsuarioId = 1,
-
+                UsuarioId = usuarioId,
                 Fecha = DateTime.Now
             };
 

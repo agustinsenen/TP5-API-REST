@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Producto;
@@ -8,6 +9,7 @@ namespace SistemaInventario.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ProductosController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,6 +20,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         // GET: api/productos
+        // Usuario y Administrador
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProductoDto>>> GetProductos()
         {
@@ -42,6 +45,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         // GET: api/productos/5
+        // Usuario y Administrador
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductoDto>> GetProducto(int id)
         {
@@ -75,7 +79,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // POST: api/productos
+        // Solo Administrador
         [HttpPost]
+        [Authorize(Roles = "Administrador")]
         public async Task<ActionResult<ProductoDto>> CrearProducto(
             CrearProductoDto dto)
         {
@@ -128,7 +134,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // PUT: api/productos/5
+        // Solo Administrador
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> ActualizarProducto(
             int id,
             ActualizarProductoDto dto)
@@ -165,7 +173,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // DELETE: api/productos/5
+        // Solo Administrador
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> EliminarProducto(int id)
         {
             var producto = await _context.Productos.FindAsync(id);

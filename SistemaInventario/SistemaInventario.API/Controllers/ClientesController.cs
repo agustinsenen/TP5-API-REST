@@ -2,11 +2,13 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SistemaInventario.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ClientesController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -36,6 +38,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Administrador")]
         public async Task<ActionResult<Cliente>> CrearCliente(Cliente cliente)
         {
             _context.Clientes.Add(cliente);
@@ -49,6 +52,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> ActualizarCliente(
             int id,
             Cliente cliente)
@@ -77,6 +81,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> EliminarCliente(int id)
         {
             var cliente = await _context.Clientes

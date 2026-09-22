@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaInventario.API.Data;
 using SistemaInventario.API.DTOs.Categoria;
@@ -8,6 +9,7 @@ namespace SistemaInventario.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CategoriasController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,6 +20,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         // GET: api/categorias
+        // Usuario y Administrador
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CategoriaDto>>> GetCategorias()
         {
@@ -34,6 +37,7 @@ namespace SistemaInventario.API.Controllers
         }
 
         // GET: api/categorias/5
+        // Usuario y Administrador
         [HttpGet("{id}")]
         public async Task<ActionResult<CategoriaDto>> GetCategoria(int id)
         {
@@ -59,7 +63,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // POST: api/categorias
+        // Solo Administrador
         [HttpPost]
+        [Authorize(Roles = "Administrador")]
         public async Task<ActionResult<CategoriaDto>> CrearCategoria(
             CrearCategoriaDto dto)
         {
@@ -87,7 +93,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // PUT: api/categorias/5
+        // Solo Administrador
         [HttpPut("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> ActualizarCategoria(
             int id,
             ActualizarCategoriaDto dto)
@@ -111,7 +119,9 @@ namespace SistemaInventario.API.Controllers
         }
 
         // DELETE: api/categorias/5
+        // Solo Administrador
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> EliminarCategoria(int id)
         {
             var categoria = await _context.Categorias.FindAsync(id);
